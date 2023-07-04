@@ -32,12 +32,10 @@ class BamVisualiser:
             self.get_base_counts(int(position), min_depth) for position in positions
         ]
         pileup_df = pd.DataFrame(rows_list)
-        print(pileup_df)
         return pileup_df
 
     def get_base_counts(self, position, min_depth):
         base_counts_dict = {"position": position, "A": 0, "T": 0, "C": 0, "G": 0}
-        print(position)
         pileup_columns = self.bam_file.count_coverage(
             contig=self.ref_name,
             start=position - 1,
