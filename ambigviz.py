@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 __author__ = "Sam Sims"
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 
 class BamVisualiser:
@@ -106,13 +106,14 @@ class BamVisualiser:
         if args.percentages:
             pileup_df = self.pileup_percentages(pileup_df)
 
-        figure_to_plot = self.plot_pileup(pileup_df, title, args.fig_width, args.individual_annotations)
+        figure_to_plot = self.plot_pileup(
+            pileup_df, title, args.fig_width, args.individual_annotations
+        )
 
         # Outputs
         figure_to_plot.savefig(args.output, bbox_inches="tight")
         if args.save_counts:
             pileup_df.to_csv(args.save_counts, index=False)
-
 
     def test(self):
         data = {
