@@ -38,6 +38,7 @@ If the input BAM file has not been indexed, ambigviz will attempt to index it fi
 - `--save_counts`: Save counts to a CSV file. Provide a path
 - `--fig_width`: Adjust the width of the figure (default: 20).
 - `--individual_annotations`: Show individual annotations.
+- `--output`: Location for output plot (default: pileup.png)
 
 ## Example Commands
 
@@ -69,4 +70,4 @@ Using `--individual_annotations`:
 
 ## Version
 
-- 0.1.1
+- 0.1.2
