@@ -123,38 +123,56 @@ class BamVisualiser:
         test_df = pd.DataFrame(data)
         self.plot_pileup(test_df, "140-145", 20, False)
 
-
+# fmt: off
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Visualise ambiguous posistions in a BAM file"
     )
-    parser.add_argument("-b", "--bam", help="BAM file to visualise", required=True)
-    parser.add_argument("--positions", help="Positions to visualise")
-    parser.add_argument("--start_pos", help="Start position to visualise", type=int)
-    parser.add_argument("--end_pos", help="End position to visualise", type=int)
-    parser.add_argument(
-        "--percentages", help="Show percentages instead of counts", action="store_true"
+    parser.add_argument("-b", 
+                        "--bam", 
+                        help="BAM file to visualise", 
+                        required=True)
+    
+    parser.add_argument("--positions", 
+                        help="Positions to visualise")
+    
+    parser.add_argument("--start_pos", 
+                        help="Start position to visualise", 
+                        type=int)
+    
+    parser.add_argument("--end_pos", 
+                        help="End position to visualise", 
+                        type=int)
+    
+    parser.add_argument("--percentages",
+                        help="Show percentages instead of counts", 
+                        action="store_true"
     )
-    parser.add_argument(
-        "--min_depth", help="Minimum depth to visualise", default=0, type=int
+    parser.add_argument("--min_depth", 
+                        help="Minimum depth to visualise", 
+                        default=0, 
+                        type=int
     )
-    parser.add_argument("--save_counts", help="Save counts to csv file")
-    parser.add_argument(
-        "--fig_width", help="Adjust width of figure", default=20, type=int
+    parser.add_argument("--save_counts", 
+                        help="Save counts to csv file")
+    
+    parser.add_argument("--fig_width", 
+                        help="Adjust width of figure", 
+                        default=20, 
+                        type=int
     )
-    parser.add_argument(
-        "--individual_annotations",
-        help="Show individual annotations",
-        action="store_true",
+    parser.add_argument("--individual_annotations",
+                        help="Show individual annotations",
+                        action="store_true",
     )
     return parser.parse_args()
+# fmt: on
 
 
 def main():
     args = parse_args()
     bam_vis = BamVisualiser(args.bam)
     bam_vis.visualise(args)
-    # bam_vis.test()
 
 
 if __name__ == "__main__":
