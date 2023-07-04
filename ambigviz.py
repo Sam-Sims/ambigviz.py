@@ -85,7 +85,7 @@ class BamVisualiser:
                 y = total_count / 2
                 ax.annotate(annotation_text, xy=(x, y), ha="center", va="center")
 
-        plt.savefig("pileup.png")
+        return fig
 
     def pileup_percentages(self, pileup_df):
         total_counts = pileup_df[["A", "T", "C", "G"]].sum(axis=1)
@@ -106,11 +106,13 @@ class BamVisualiser:
         if args.percentages:
             pileup_df = self.pileup_percentages(pileup_df)
 
-        self.plot_pileup(pileup_df, title, args.fig_width, args.individual_annotations)
+        figure_to_plot = self.plot_pileup(pileup_df, title, args.fig_width, args.individual_annotations)
 
-        # save the counts to a csv file
+        # Outputs
+        figure_to_plot.savefig(args.output, bbox_inches="tight")
         if args.save_counts:
             pileup_df.to_csv(args.save_counts, index=False)
+
 
     def test(self):
         data = {
@@ -123,15 +125,19 @@ class BamVisualiser:
         test_df = pd.DataFrame(data)
         self.plot_pileup(test_df, "140-145", 20, False)
 
+
 # fmt: off
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Visualise ambiguous posistions in a BAM file"
     )
-    parser.add_argument("-b", 
-                        "--bam", 
+    parser.add_argument("-b", "--bam", 
                         help="BAM file to visualise", 
                         required=True)
+    
+    parser.add_argument("-o", "--output",
+                        help="Output file name",
+                        default="pileup.png")
     
     parser.add_argument("--positions", 
                         help="Positions to visualise")
