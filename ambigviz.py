@@ -53,55 +53,37 @@ class BamVisualiser:
 
     def plot_pileup(self, df, title, fig_width, individual):
         fig, ax = plt.subplots(figsize=(fig_width, 5))
-
-        # Define the bar colors
         colors = ["#60935D", "#E63946", "#1B5299", "#F5BB00"]
 
         df.plot(x="position", kind="bar", stacked=True, color=colors, ax=ax)
 
         # Formatting
-        ax.set_xlabel("Position")
-        ax.set_ylabel("Count")
-        # Move the legend to outside the plot
-        ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
+        ax.set(xlabel="Position", ylabel="Count")
+        ax.legend(bbox_to_anchor=(1.05, 1))
         ax.set_title(f"Ambiguous bases in BAM file at positions {title}")
 
-        # Annotation to match bar order
+        # Annotation
         bar_order = df.columns[1:][::-1]
-        for j, row in df.iterrows():
+        for idx, row in df.iterrows():
             if individual:
-                for c in ax.containers:
-                    column = c.get_label()
+                for container in ax.containers:
                     labels = [
-                        f"{column}: {str(v.get_height())}" if v.get_height() > 0 else ""
-                        for v in c
+                        f"{container}: {bar.get_height()}"
+                        if bar.get_height() > 0
+                        else ""
+                        for container, bar in zip(bar_order, container)
                     ]
-                    print(labels)
-                    ax.bar_label(
-                        c,
-                        labels=labels,
-                        label_type="center",
-                        size=8,
-                    )
+                    ax.bar_label(container, labels=labels, label_type="center", size=8)
             else:
                 total_count = row[bar_order].sum()
                 annotation_text = "\n".join(
-                    f"{column}: {count}"
-                    for column, count in zip(bar_order, row[bar_order])
+                    f"{container}: {count}"
+                    for container, count in zip(bar_order, row[bar_order])
                     if count > 0
                 )
-
-                x = j
+                x = idx
                 y = total_count / 2
-
-                ax.annotate(
-                    annotation_text,
-                    xy=(x, y),
-                    xytext=(x, y),
-                    ha="center",
-                    va="center",
-                    color="black",
-                )
+                ax.annotate(annotation_text, xy=(x, y), ha="center", va="center")
 
         plt.savefig("pileup.png")
 
@@ -139,7 +121,7 @@ class BamVisualiser:
             "G": [0, 0, 40, 50, 60, 0],
         }
         test_df = pd.DataFrame(data)
-        self.plot_pileup(test_df, "140-145", 20, True)
+        self.plot_pileup(test_df, "140-145", 20, False)
 
 
 def parse_args():
