@@ -25,6 +25,7 @@ It provides a simple command-line interface for specifying the input BAM file an
 ```
 python bam_visualiser.py -b <bam_file> [options]
 ```
+If the input BAM file has not been indexed, ambigviz will attempt to index it first.
 
 ### Arguments
 
@@ -33,8 +34,8 @@ python bam_visualiser.py -b <bam_file> [options]
 - `--start_pos`: Start position to visualise.
 - `--end_pos`: End position to visualise.
 - `--percentages`: Show percentages instead of counts.
-- `--min_depth`: Minimum depth to visualise (default: 0).
-- `--save_counts`: Save counts to a CSV file.
+- `--min_depth`: Minimum depth to include a nucleotide in the plot (default: 0).
+- `--save_counts`: Save counts to a CSV file. Provide a path
 - `--fig_width`: Adjust the width of the figure (default: 20).
 - `--individual_annotations`: Show individual annotations.
 
