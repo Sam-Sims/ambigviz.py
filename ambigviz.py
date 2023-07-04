@@ -17,10 +17,15 @@ class BamVisualiser:
     def check_index(self):
         if not self.bam_file.has_index():
             print("BAM file is not indexed, attempting to index...")
-            pysam.index(self.bam_path)
-            print("Done!")
-            # Reopen the bam file once indexed
-            self.bam_file = pysam.AlignmentFile(self.bam_path, "rb")
+            # try index, else raise exception
+            try:
+                pysam.index(self.bam_path)
+                print("Done!")
+                # Reopen the bam file once indexed
+                self.bam_file = pysam.AlignmentFile(self.bam_path, "rb")
+            except Exception as e:
+                print(f"Could not index BAM file: {e}")
+                exit(1)
 
     def pileup(self, positions, min_depth):
         rows_list = [
@@ -31,33 +36,22 @@ class BamVisualiser:
         return pileup_df
 
     def get_base_counts(self, position, min_depth):
-        rows_dict = {"position": position, "A": 0, "T": 0, "C": 0, "G": 0}
-        for col in self.bam_file.pileup(
+        base_counts_dict = {"position": position, "A": 0, "T": 0, "C": 0, "G": 0}
+        print(position)
+        pileup_columns = self.bam_file.count_coverage(
             contig=self.ref_name,
-            start=position,
-            stop=position + 1,
-            min_base_quality=0,
-        ):
-            bases = []
-            for read in col.pileups:
-                if col.pos == (position - 1):
-                    if read.query_position is not None:
-                        bases.append(read.alignment.query_sequence[read.query_position])
-                    else:
-                        bases.append(".")
-                    rows_dict = {
-                        "position": position,
-                        "A": bases.count("A"),
-                        "T": bases.count("T"),
-                        "C": bases.count("C"),
-                        "G": bases.count("G"),
-                    }
-        # check each key in dict and if the value is less than the min_depth, set it to 0
-        for key in rows_dict:
-            if rows_dict[key] < min_depth:
-                rows_dict[key] = 0
+            start=position - 1,
+            stop=position,
+            quality_threshold=0,
+        )
+        for base, counts in zip("ATCG", pileup_columns):
+            base_counts_dict[base] = sum(counts)
 
-        return rows_dict
+        for key in base_counts_dict:
+            if base_counts_dict[key] < min_depth:
+                base_counts_dict[key] = 0
+
+        return base_counts_dict
 
     def plot_pileup(self, df, title, fig_width, individual):
         fig, ax = plt.subplots(figsize=(fig_width, 5))
@@ -122,12 +116,12 @@ class BamVisualiser:
     def visualise(self, args):
         if args.positions:
             positions = args.positions.split(",")
-            pileup_df = self.pileup(positions, args.min_depth)
             title = ",".join(positions)
         elif args.start_pos and args.end_pos:
             positions = range(args.start_pos, args.end_pos + 1)
-            pileup_df = self.pileup(positions, args.min_depth)
             title = f"{args.start_pos}-{args.end_pos}"
+
+        pileup_df = self.pileup(positions, args.min_depth)
 
         if args.percentages:
             pileup_df = self.pileup_percentages(pileup_df)
@@ -180,7 +174,7 @@ def main():
     args = parse_args()
     bam_vis = BamVisualiser(args.bam)
     bam_vis.visualise(args)
-    #bam_vis.test()
+    # bam_vis.test()
 
 
 if __name__ == "__main__":
