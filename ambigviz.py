@@ -116,6 +116,41 @@ class BamVisualiser:
         if args.save_counts:
             pileup_df.to_csv(args.save_counts, index=False)
 
+    def calculate_all(self, args):
+        reference_length = self.bam_file.get_reference_length(self.ref_name)
+        positions = range(1, reference_length + 1)
+
+        # for each position in positions, create a dict with position and base counts set to 0
+        base_counts_dict = {
+            position: {"A": 0, "T": 0, "C": 0, "G": 0} for position in positions
+        }
+        # count_coverage for all positions
+        pileup_columns = self.bam_file.count_coverage(
+            contig=self.ref_name,
+            quality_threshold=8,
+        )
+
+        # pileup_columns contains 4 tuples, each tuple contains a list of counts for each base in the order A, C, G, T
+        # for each position, add the counts of each base to the base_counts_dict
+        for pos in positions:
+            base_counts_dict[pos]["A"] += pileup_columns[0][pos - 1]
+            base_counts_dict[pos]["C"] += pileup_columns[1][pos - 1]
+            base_counts_dict[pos]["G"] += pileup_columns[2][pos - 1]
+            base_counts_dict[pos]["T"] += pileup_columns[3][pos - 1]
+
+        # convert base_counts_dict to a dataframe
+        base_counts_df = pd.DataFrame.from_dict(base_counts_dict, orient="index")
+        base_counts_df.index.name = "position"
+        base_counts_df.reset_index(inplace=True)
+
+        # remove all positions that only have 1 value greater than 0
+        base_counts_df = base_counts_df[
+            (base_counts_df[["A", "T", "C", "G"]] != 0).sum(axis=1) > 1
+        ]
+
+        # save dataframe to csv
+        base_counts_df.to_csv("test.csv", index=False)
+
     def test(self):
         data = {
             "position": [140, 141, 142, 143, 145, 145],
@@ -178,6 +213,10 @@ def parse_args():
                         default=0,
                         type=int,
     )
+    parser.add_argument("--calculate_all",
+                        help="Save list of all positions with mixed bases to csv file.",
+                        action="store_true",
+    )
     return parser.parse_args()
 # fmt: on
 
@@ -185,7 +224,10 @@ def parse_args():
 def main():
     args = parse_args()
     bam_vis = BamVisualiser(args.bam)
-    bam_vis.visualise(args)
+    if args.calculate_all:
+        bam_vis.calculate_all(args)
+    else:
+        bam_vis.visualise(args)
 
 
 if __name__ == "__main__":
