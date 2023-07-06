@@ -27,20 +27,21 @@ class BamVisualiser:
                 print(f"Could not index BAM file: {e}")
                 exit(1)
 
-    def pileup(self, positions, min_depth):
+    def pileup(self, positions, min_depth, quality_threshold):
         rows_list = [
-            self.get_base_counts(int(position), min_depth) for position in positions
+            self.get_base_counts(int(position), min_depth, quality_threshold)
+            for position in positions
         ]
         pileup_df = pd.DataFrame(rows_list)
         return pileup_df
 
-    def get_base_counts(self, position, min_depth):
+    def get_base_counts(self, position, min_depth, quality_threshold):
         base_counts_dict = {"position": position, "A": 0, "T": 0, "C": 0, "G": 0}
         pileup_columns = self.bam_file.count_coverage(
             contig=self.ref_name,
             start=position - 1,
             stop=position,
-            quality_threshold=0,
+            quality_threshold=quality_threshold,
         )
         for base, counts in zip("ATCG", pileup_columns):
             base_counts_dict[base] = sum(counts)
@@ -101,7 +102,7 @@ class BamVisualiser:
             positions = range(args.start_pos, args.end_pos + 1)
             title = f"{args.start_pos}-{args.end_pos}"
 
-        pileup_df = self.pileup(positions, args.min_depth)
+        pileup_df = self.pileup(positions, args.min_depth, args.quality_threshold)
 
         if args.percentages:
             pileup_df = self.pileup_percentages(pileup_df)
@@ -171,6 +172,11 @@ def parse_args():
     parser.add_argument("--individual_annotations",
                         help="Show individual annotations",
                         action="store_true",
+    )
+    parser.add_argument("--quality_threshold",
+                        help="Quality threshold for pileup",
+                        default=0,
+                        type=int,
     )
     return parser.parse_args()
 # fmt: on
