@@ -23,7 +23,7 @@ It provides a simple command-line interface for specifying the input BAM file an
 ## Usage
 
 ```
-python bam_visualiser.py -b <bam_file> [options]
+python ambigviz.py -b <bam_file> [options]
 ```
 If the input BAM file has not been indexed, ambigviz will attempt to index it first.
 
@@ -45,19 +45,19 @@ If the input BAM file has not been indexed, ambigviz will attempt to index it fi
 1. Visualise specific positions:
 
    ```
-   python bam_visualiser.py -b input.bam --positions 140,145 --min_depth 10
+   python ambigviz.py -b input.bam --positions 140,145 --min_depth 10
    ```
 
 2. Visualise a range of positions, and plot the proportions:
 
    ```
-   python bam_visualiser.py -b input.bam --start_pos 100 --end_pos 200 --percentages
+   python ambigviz.py -b input.bam --start_pos 100 --end_pos 200 --percentages
    ```
 
 3. Save counts to a CSV file:
 
    ```
-   python bam_visualiser.py -b input.bam --positions 150 --save_counts counts.csv
+   python ambigviz.py -b input.bam --positions 150 --save_counts counts.csv
    ```
 
 ## Example plots:
