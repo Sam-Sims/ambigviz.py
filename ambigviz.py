@@ -138,17 +138,35 @@ class BamVisualiser:
             base_counts_dict[pos]["G"] += pileup_columns[2][pos - 1]
             base_counts_dict[pos]["T"] += pileup_columns[3][pos - 1]
 
-        # convert base_counts_dict to a dataframe
+        # convert base_counts_dict to a dataframe, with position column
         base_counts_df = pd.DataFrame.from_dict(base_counts_dict, orient="index")
         base_counts_df.index.name = "position"
         base_counts_df.reset_index(inplace=True)
-
-        # remove all positions that only have 1 value greater than 0
+        # remove rows with no values
         base_counts_df = base_counts_df[
-            (base_counts_df[["A", "T", "C", "G"]] != 0).sum(axis=1) > 1
+            (base_counts_df[["A", "T", "C", "G"]] != 0).any(axis=1)
         ]
 
-        # save dataframe to csv
+        base_counts_df["A_percent"] = (
+            base_counts_df["A"] / base_counts_df[["A", "T", "C", "G"]].sum(axis=1) * 100
+        )
+        base_counts_df["T_percent"] = (
+            base_counts_df["T"] / base_counts_df[["A", "T", "C", "G"]].sum(axis=1) * 100
+        )
+        base_counts_df["C_percent"] = (
+            base_counts_df["C"] / base_counts_df[["A", "T", "C", "G"]].sum(axis=1) * 100
+        )
+        base_counts_df["G_percent"] = (
+            base_counts_df["G"] / base_counts_df[["A", "T", "C", "G"]].sum(axis=1) * 100
+        )
+
+        # set any values less than read_fraction to 0
+        base_counts_df[base_counts_df < args.read_fraction] = 0
+
+        # remove any rows where only 1 base has a value greater than 0
+        base_counts_df = base_counts_df[
+            (base_counts_df[["A_percent", "T_percent", "C_percent", "G_percent"]] != 0).sum(axis=1) > 1
+        ]
         base_counts_df.to_csv("test.csv", index=False)
 
     def test(self):
@@ -216,6 +234,11 @@ def parse_args():
     parser.add_argument("--calculate_all",
                         help="Save list of all positions with mixed bases to csv file.",
                         action="store_true",
+    )
+    parser.add_argument("--read_fraction",
+                        help="Minimum fraction of reads that must contain the base for it to be included in the mixed base csv file.",
+                        default=0.0,
+                        type=float,
     )
     return parser.parse_args()
 # fmt: on
