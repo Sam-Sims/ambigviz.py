@@ -165,9 +165,26 @@ class BamVisualiser:
 
         # remove any rows where only 1 base has a value greater than 0
         base_counts_df = base_counts_df[
-            (base_counts_df[["A_percent", "T_percent", "C_percent", "G_percent"]] != 0).sum(axis=1) > 1
+            (
+                base_counts_df[["A_percent", "T_percent", "C_percent", "G_percent"]]
+                != 0
+            ).sum(axis=1)
+            > 1
         ]
-        base_counts_df.to_csv("test.csv", index=False)
+        base_counts_df.to_csv("mixed_bases.csv", index=False)
+
+        # remove the percent columns
+        base_counts_df.drop(
+            columns=["A_percent", "T_percent", "C_percent", "G_percent"], inplace=True
+        )
+        # plot the mixed bases using plot_pileup
+        figure_to_plot = self.plot_pileup(
+            base_counts_df,
+            f"{self.ref_name} - Mixed Bases",
+            args.fig_width,
+            args.individual_annotations,
+        )
+        figure_to_plot.savefig("pileup.png", bbox_inches="tight")
 
     def test(self):
         data = {
