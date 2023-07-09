@@ -12,6 +12,7 @@ class BamVisualiser:
         self.bam_path = bam
         self.bam_file = pysam.AlignmentFile(bam, "rb")
         self.ref_name = self.bam_file.get_reference_name(0)
+        self.ref_length = self.bam_file.get_reference_length(self.ref_name)
         self.check_index()
 
     def check_index(self):
@@ -54,7 +55,7 @@ class BamVisualiser:
 
     def plot_pileup(self, df, title, fig_width, individual):
         fig, ax = plt.subplots(figsize=(fig_width, 5))
-        colors = ["#60935D", "#E63946", "#1B5299", "#F5BB00"]
+        colors = ["#60935D", "#E63946", "#1B5299", "#F5BB00", "#F7D1CD", "#FBBA72"]
 
         df.plot(x="position", kind="bar", stacked=True, color=colors, ax=ax)
 
@@ -84,6 +85,7 @@ class BamVisualiser:
                 )
                 x = idx
                 y = total_count / 2
+                # make text white
                 ax.annotate(annotation_text, xy=(x, y), ha="center", va="center")
 
         return fig
@@ -103,6 +105,16 @@ class BamVisualiser:
             title = f"{args.start_pos}-{args.end_pos}"
 
         pileup_df = self.pileup(positions, args.min_depth, args.quality_threshold)
+        if args.indels:
+            # call count_indels which returns dict of Insertions: counts and Deletions: counts for each position - add to pileup_df as 2 new columns
+            indel_counts = self.count_indels()
+            pileup_df["Insertions"] = pileup_df["position"].map(
+                lambda x: indel_counts[x]["Insertion"]
+            )
+            pileup_df["Deletions"] = pileup_df["position"].map(
+                lambda x: indel_counts[x]["Deletion"]
+            )
+        print(pileup_df)
 
         if args.percentages:
             pileup_df = self.pileup_percentages(pileup_df)
@@ -117,13 +129,14 @@ class BamVisualiser:
             pileup_df.to_csv(args.save_counts, index=False)
 
     def calculate_all(self, args):
-        reference_length = self.bam_file.get_reference_length(self.ref_name)
-        positions = range(1, reference_length + 1)
+        positions = range(1, self.ref_length + 1)
 
         # for each position in positions, create a dict with position and base counts set to 0
         base_counts_dict = {
-            position: {"A": 0, "T": 0, "C": 0, "G": 0} for position in positions
+            position: {"A": 0, "T": 0, "C": 0, "G": 0, "Insertion": 0, "Deletion": 0}
+            for position in positions
         }
+
         # count_coverage for all positions
         pileup_columns = self.bam_file.count_coverage(
             contig=self.ref_name,
@@ -142,22 +155,56 @@ class BamVisualiser:
         base_counts_df = pd.DataFrame.from_dict(base_counts_dict, orient="index")
         base_counts_df.index.name = "position"
         base_counts_df.reset_index(inplace=True)
-        # remove rows with no values
+
+        if args.indels:
+            # call count_indels which returns dict of Insertions: counts and Deletions: counts for each position - add to pileup_df as 2 new columns
+            indel_counts = self.count_indels()
+
+            # Add "Insertion" and "Deletion" columns to the dataframe
+            base_counts_df["Insertion"] = base_counts_df["position"].map(
+                lambda x: indel_counts[x]["Insertion"]
+            )
+            base_counts_df["Deletion"] = base_counts_df["position"].map(
+                lambda x: indel_counts[x]["Deletion"]
+            )
+        # remove positions with 0 coverage
         base_counts_df = base_counts_df[
-            (base_counts_df[["A", "T", "C", "G"]] != 0).any(axis=1)
+            base_counts_df[["A", "T", "C", "G", "Insertion", "Deletion"]].sum(axis=1)
+            > 0
         ]
 
+        # Calculate insertion and deletion percentages
+        base_counts_df["Insertion_percent"] = (
+            base_counts_df["Insertion"]
+            / base_counts_df[["A", "T", "C", "G", "Insertion", "Deletion"]].sum(axis=1)
+            * 100
+        )
+        base_counts_df["Deletion_percent"] = (
+            base_counts_df["Deletion"]
+            / base_counts_df[["A", "T", "C", "G", "Insertion", "Deletion"]].sum(axis=1)
+            * 100
+        )
+
+        # Calculate A, T, C, G percentages
         base_counts_df["A_percent"] = (
-            base_counts_df["A"] / base_counts_df[["A", "T", "C", "G"]].sum(axis=1) * 100
+            base_counts_df["A"]
+            / base_counts_df[["A", "T", "C", "G", "Insertion", "Deletion"]].sum(axis=1)
+            * 100
         )
         base_counts_df["T_percent"] = (
-            base_counts_df["T"] / base_counts_df[["A", "T", "C", "G"]].sum(axis=1) * 100
+            base_counts_df["T"]
+            / base_counts_df[["A", "T", "C", "G", "Insertion", "Deletion"]].sum(axis=1)
+            * 100
         )
         base_counts_df["C_percent"] = (
-            base_counts_df["C"] / base_counts_df[["A", "T", "C", "G"]].sum(axis=1) * 100
+            base_counts_df["C"]
+            / base_counts_df[["A", "T", "C", "G", "Insertion", "Deletion"]].sum(axis=1)
+            * 100
         )
         base_counts_df["G_percent"] = (
-            base_counts_df["G"] / base_counts_df[["A", "T", "C", "G"]].sum(axis=1) * 100
+            base_counts_df["G"]
+            / base_counts_df[["A", "T", "C", "G", "Insertion", "Deletion"]].sum(axis=1)
+            * 100
         )
 
         # set any values less than read_fraction to 0
@@ -166,18 +213,43 @@ class BamVisualiser:
         # remove any rows where only 1 base has a value greater than 0
         base_counts_df = base_counts_df[
             (
-                base_counts_df[["A_percent", "T_percent", "C_percent", "G_percent"]]
+                base_counts_df[
+                    [
+                        "A_percent",
+                        "T_percent",
+                        "C_percent",
+                        "G_percent",
+                        "Insertion_percent",
+                        "Deletion_percent",
+                    ]
+                ]
                 != 0
             ).sum(axis=1)
             > 1
         ]
+
+        # Remove any rows where all values are 0
+        base_counts_df = base_counts_df[
+            base_counts_df[["A", "T", "C", "G", "Insertion", "Deletion"]].sum(axis=1)
+            > 0
+        ]
+
         base_counts_df.to_csv("mixed_bases.csv", index=False)
 
-        # remove the percent columns
+        # Remove the percent columns
         base_counts_df.drop(
-            columns=["A_percent", "T_percent", "C_percent", "G_percent"], inplace=True
+            columns=[
+                "A_percent",
+                "T_percent",
+                "C_percent",
+                "G_percent",
+                "Insertion_percent",
+                "Deletion_percent",
+            ],
+            inplace=True,
         )
-        # plot the mixed bases using plot_pileup
+
+        # Plot the mixed bases using plot_pileup
         figure_to_plot = self.plot_pileup(
             base_counts_df,
             f"{self.ref_name} - Mixed Bases",
@@ -185,6 +257,35 @@ class BamVisualiser:
             args.individual_annotations,
         )
         figure_to_plot.savefig("pileup.png", bbox_inches="tight")
+
+    def count_indels(self):
+        # Open BAM file for reading
+        positions = range(1, self.ref_length + 1)
+
+        # for each position in positions, create a dict with position and base counts set to 0
+        indel_count_dict = {
+            position: {
+                "Deletion": 0,
+                "Insertion": 0,
+            }
+            for position in positions
+        }
+
+        # Iterate through each position in the BAM file
+        for pileupcolumn in self.bam_file.pileup(
+            contig=self.ref_name, min_base_quality=0
+        ):
+            position = pileupcolumn.pos
+
+            pileupreads = pileupcolumn.pileups
+
+            # Iterate through each pileup read
+            for pileupread in pileupreads:
+                if pileupread.is_del:
+                    indel_count_dict[position + 1]["Deletion"] += 1
+                elif pileupread.indel > 0 and not pileupread.is_del:
+                    indel_count_dict[position + 2]["Insertion"] += 1
+        return indel_count_dict
 
     def test(self):
         data = {
@@ -256,6 +357,10 @@ def parse_args():
                         help="Minimum fraction of reads that must contain the base for it to be included in the mixed base csv file.",
                         default=0.0,
                         type=float,
+    )
+    parser.add_argument("--indels",
+                        help="Include indels in the pileup.",
+                        action="store_true",
     )
     return parser.parse_args()
 # fmt: on
