@@ -44,7 +44,7 @@ class BamVisualiser:
             stop=position,
             quality_threshold=quality_threshold,
         )
-        for base, counts in zip("ATCG", pileup_columns):
+        for base, counts in zip("ACGT", pileup_columns):
             base_counts_dict[base] = sum(counts)
 
         for key in base_counts_dict:
