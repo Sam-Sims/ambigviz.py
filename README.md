@@ -2,6 +2,9 @@
 
 ![GitHub](https://img.shields.io/badge/Python-3.6%2B-blue)
 
+Recently re-wrote this in rust due to performance issues when handling large BAM files - a lot faster and more feature complete:
+[ambigviz.rs](https://github.com/Sam-Sims/ambigviz)
+
 ambigviz is a Python tool that allows you to visualise mixed bases at given positions in a BAM file. Initially written as a quick way to produce plots for examining co-infection/contamination/sequencing errors in SARS-CoV-2 sequences.
 
 It provides a simple command-line interface for specifying the input BAM file and the desired positions to visualise. The tool generates a bar plot showing the distribution of nucleotide bases (A, T, C, G) at the specified positions.
